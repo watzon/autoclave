@@ -202,6 +202,38 @@ ompAdapterTestLayer("OmpAdapterLive", (it) => {
     }),
   );
 
+  it.effect("reports model selection failures as session/set_model", () =>
+    Effect.gen(function* () {
+      const adapter = yield* OmpAdapter;
+      const serverSettings = yield* ServerSettingsService;
+      const wrapperPath = yield* Effect.promise(() => makeMockAgentWrapper());
+      yield* serverSettings.updateSettings({
+        providers: { omp: { binaryPath: wrapperPath, enabled: true } },
+      });
+
+      const result = yield* adapter
+        .startSession({
+          threadId: ThreadId.make("omp-invalid-model"),
+          provider: ProviderDriverKind.make("omp"),
+          cwd: process.cwd(),
+          runtimeMode: "full-access",
+          modelSelection: {
+            instanceId: ProviderInstanceId.make("omp"),
+            model: "missing-omp-model",
+          },
+        })
+        .pipe(Effect.result);
+
+      assert.equal(result._tag, "Failure");
+      if (result._tag === "Failure") {
+        assert.equal(result.failure._tag, "ProviderAdapterRequestError");
+        if (result.failure._tag === "ProviderAdapterRequestError") {
+          assert.equal(result.failure.method, "session/set_model");
+        }
+      }
+    }),
+  );
+
   it.effect("loads an OMP ACP session from its resume cursor", () =>
     Effect.gen(function* () {
       const adapter = yield* OmpAdapter;

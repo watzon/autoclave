@@ -113,7 +113,7 @@ export function applyOmpRequestedSessionConfiguration<E>(input: {
     | undefined;
   readonly mapError: (context: {
     readonly cause: EffectAcpErrors.AcpError;
-    readonly method: "session/set_config_option" | "session/set_mode";
+    readonly method: "session/set_config_option" | "session/set_mode" | "session/set_model";
   }) => E;
 }): Effect.Effect<void, E> {
   return Effect.gen(function* () {
@@ -122,7 +122,11 @@ export function applyOmpRequestedSessionConfiguration<E>(input: {
         runtime: input.runtime,
         model: input.modelSelection.model,
         selections: input.modelSelection.options,
-        mapError: ({ cause }) => input.mapError({ cause, method: "session/set_config_option" }),
+        mapError: ({ cause, step }) =>
+          input.mapError({
+            cause,
+            method: step === "set-model" ? "session/set_model" : "session/set_config_option",
+          }),
       });
     }
 
